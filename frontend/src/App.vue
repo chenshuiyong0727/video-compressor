@@ -32,7 +32,11 @@
         </div>
       </el-header>
       <el-main class="main-content">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <KeepAlive>
+            <component :is="Component" />
+          </KeepAlive>
+        </router-view>
       </el-main>
     </el-container>
   </el-container>

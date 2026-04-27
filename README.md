@@ -12,6 +12,8 @@
 - 支持单个视频压缩和批量排队压缩。
 - 后台使用单线程队列逐个调用 FFmpeg，避免同时压缩多个大视频。
 - 展示任务状态、进度、原大小、新大小、节省比例和失败原因。
+- 使用 SQLite 持久化扫描记录、压缩任务和操作记录。
+- 可识别文件是否已有成功压缩记录，重复压缩前会提醒。
 - 压缩结果输出到 `data/output`。
 - 源文件不会自动删除，只能由用户确认后移动到 `data/backup`。
 - 系统设置页可检测 `ffmpeg.exe`、`ffprobe.exe` 和本地目录状态。
@@ -21,6 +23,7 @@
 - 后端：JDK 21、Spring Boot 3、Maven
 - 前端：Vue 3、Vite、Element Plus、Axios
 - 视频处理：`ffmpeg.exe`、`ffprobe.exe`
+- 持久化：SQLite，本地文件数据库，无需单独安装数据库服务
 
 ## 目录说明
 
@@ -44,6 +47,14 @@ local-video-compressor
 ```
 
 `data/input` 放待压缩视频，`data/output` 放压缩后视频，`data/backup` 放用户确认后移动的源视频。
+
+SQLite 数据库文件会自动创建在：
+
+```text
+data/db/video-compressor.db
+```
+
+不需要安装 MySQL、Redis 或 SQLite 服务。
 
 ## 准备 FFmpeg
 
@@ -156,13 +167,33 @@ Vite 会把 `/api` 代理到 `http://localhost:8787`。
 8. 确认输出文件可用后，可把源文件移动到 `data/backup`。
 9. 手动把 `data/output` 中的压缩视频复制回手机。
 
+## 修改视频目录
+
+可以在“系统设置”页修改 `input`、`output`、`backup`、`temp`、`logs` 目录。
+
+目录支持绝对路径，例如：
+
+```text
+input: E:/照片
+output: E:/压缩后视频
+backup: E:/视频备份
+```
+
+保存后后端会立即使用新目录，并把配置写入：
+
+```text
+data/config/video-dirs.json
+```
+
+下次启动会自动读取上次保存的目录配置。浏览器出于安全限制不能直接读取 Windows 任意文件夹路径，所以当前版本通过输入路径保存。
+
 ## 压缩模式
 
-- 高清优先：`libx264`、`preset slow`、`crf 22`、`aac 128k`
-- 平衡模式：`libx264`、`preset medium`、`crf 24`、`aac 128k`
-- 小体积优先：`libx264`、`preset medium`、`crf 27`、`aac 96k`
+- 高清优先：`libx264`、`preset slow`、`crf 22`、`yuv420p`、`aac 128k`、输出 MP4
+- 平衡模式：`libx264`、`preset medium`、`crf 24`、`yuv420p`、`aac 128k`、输出 MP4
+- 小体积优先：`libx264`、`preset medium`、`crf 27`、`yuv420p`、`aac 96k`、输出 MP4
 
-所有压缩模式都会输出 H.264 编码，不使用 HEVC/H.265。HEVC/H.265 虽然可能更小，但部分设备、相册、播放器或第三方软件解析不好，所以第一版完全不启用。
+所有压缩模式都会输出 H.264 编码和 MP4 容器，不使用 HEVC/H.265。HEVC/H.265 虽然可能更小，但部分设备、相册、播放器或第三方软件解析不好，所以第一版完全不启用。
 
 ## 安全注意事项
 
@@ -172,6 +203,22 @@ Vite 会把 `/api` 代理到 `http://localhost:8787`。
 - 输出文件使用 `_compressed` 后缀，不会覆盖源文件。
 - 压缩完成后会校验输出文件是否存在、大小是否大于 0、是否能被 ffprobe 识别。
 - 如果压缩后文件比源文件更大，任务会标记为失败并提示不建议使用。
+
+## 持久化记录
+
+系统会自动记录：
+
+- 扫描到的视频文件信息。
+- 每一次压缩任务的状态、进度、结果和失败原因。
+- 创建任务、开始压缩、压缩成功、压缩失败、取消任务、移动备份等操作记录。
+
+重复压缩判断使用：
+
+```text
+relativePath + sizeBytes + lastModified
+```
+
+这样不会对几百 MB 或数 GB 视频额外计算 hash，扫描速度更适合本地批量工具。若文件已经有成功压缩记录或已经存在输出文件，页面会显示重复风险，并在再次压缩前提醒。
 
 ## 常见问题
 

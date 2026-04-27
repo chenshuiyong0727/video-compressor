@@ -25,6 +25,25 @@
         </el-tag>
       </template>
     </el-table-column>
+    <el-table-column prop="lastTaskStatus" label="历史状态" width="118">
+      <template #default="{ row }">
+        <el-tag v-if="row.lastTaskStatus" :type="statusType(row.lastTaskStatus)" effect="plain">
+          {{ statusText(row.lastTaskStatus) }}
+        </el-tag>
+        <span v-else class="muted">无</span>
+      </template>
+    </el-table-column>
+    <el-table-column prop="compressedCount" label="成功/失败" width="112">
+      <template #default="{ row }">
+        {{ row.compressedCount || 0 }}/{{ row.failedCount || 0 }}
+      </template>
+    </el-table-column>
+    <el-table-column prop="duplicateCompressionRisk" label="重复风险" width="110">
+      <template #default="{ row }">
+        <el-tag v-if="row.duplicateCompressionRisk" type="danger" effect="plain">已成功</el-tag>
+        <span v-else class="muted">-</span>
+      </template>
+    </el-table-column>
     <el-table-column label="操作" fixed="right" width="190">
       <template #default="{ row }">
         <el-button size="small" type="primary" :icon="VideoPlay" @click="$emit('compress-one', row)">
@@ -59,5 +78,24 @@ function emitSelection(rows: VideoFileInfo[]) {
 function formatTime(value: number) {
   if (!value) return "-";
   return new Date(value).toLocaleString();
+}
+
+function statusText(status: string) {
+  const map: Record<string, string> = {
+    WAITING: "等待中",
+    RUNNING: "压缩中",
+    SUCCESS: "成功",
+    FAILED: "失败",
+    CANCELLED: "已取消"
+  };
+  return map[status] || status;
+}
+
+function statusType(status: string) {
+  if (status === "SUCCESS") return "success";
+  if (status === "FAILED") return "danger";
+  if (status === "RUNNING") return "primary";
+  if (status === "WAITING") return "warning";
+  return "info";
 }
 </script>

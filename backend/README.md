@@ -18,6 +18,8 @@ http://localhost:8787
 
 - `GET /api/system/check`
 - `GET /api/system/dirs`
+- `POST /api/system/dirs`
+- `GET /api/system/operations`
 - `GET /api/videos/scan?minSizeMb=100`
 - `POST /api/videos/backup`
 - `POST /api/tasks/compress`

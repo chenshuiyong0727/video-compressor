@@ -17,6 +17,13 @@ public class VideoFileInfo {
     private String codec;
     private String format;
     private Boolean compressedExists;
+    private Integer compressedCount;
+    private Integer failedCount;
+    private String lastTaskStatus;
+    private String lastTaskMessage;
+    private String lastOutputPath;
+    private Long lastTaskTime;
+    private Boolean duplicateCompressionRisk;
 
     public String getId() {
         return id;
@@ -136,5 +143,61 @@ public class VideoFileInfo {
 
     public void setCompressedExists(Boolean compressedExists) {
         this.compressedExists = compressedExists;
+    }
+
+    public Integer getCompressedCount() {
+        return compressedCount;
+    }
+
+    public void setCompressedCount(Integer compressedCount) {
+        this.compressedCount = compressedCount;
+    }
+
+    public Integer getFailedCount() {
+        return failedCount;
+    }
+
+    public void setFailedCount(Integer failedCount) {
+        this.failedCount = failedCount;
+    }
+
+    public String getLastTaskStatus() {
+        return lastTaskStatus;
+    }
+
+    public void setLastTaskStatus(String lastTaskStatus) {
+        this.lastTaskStatus = lastTaskStatus;
+    }
+
+    public String getLastTaskMessage() {
+        return lastTaskMessage;
+    }
+
+    public void setLastTaskMessage(String lastTaskMessage) {
+        this.lastTaskMessage = lastTaskMessage;
+    }
+
+    public String getLastOutputPath() {
+        return lastOutputPath;
+    }
+
+    public void setLastOutputPath(String lastOutputPath) {
+        this.lastOutputPath = lastOutputPath;
+    }
+
+    public Long getLastTaskTime() {
+        return lastTaskTime;
+    }
+
+    public void setLastTaskTime(Long lastTaskTime) {
+        this.lastTaskTime = lastTaskTime;
+    }
+
+    public Boolean getDuplicateCompressionRisk() {
+        return duplicateCompressionRisk;
+    }
+
+    public void setDuplicateCompressionRisk(Boolean duplicateCompressionRisk) {
+        this.duplicateCompressionRisk = duplicateCompressionRisk;
     }
 }

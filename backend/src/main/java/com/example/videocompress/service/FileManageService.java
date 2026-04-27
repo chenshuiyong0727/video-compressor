@@ -17,10 +17,16 @@ public class FileManageService {
 
     private final VideoCompressProperties properties;
     private final VideoScanService videoScanService;
+    private final PersistenceService persistenceService;
 
-    public FileManageService(VideoCompressProperties properties, VideoScanService videoScanService) {
+    public FileManageService(
+            VideoCompressProperties properties,
+            VideoScanService videoScanService,
+            PersistenceService persistenceService
+    ) {
         this.properties = properties;
         this.videoScanService = videoScanService;
+        this.persistenceService = persistenceService;
     }
 
     public List<String> moveToBackup(List<String> videoIds) throws IOException {
@@ -34,6 +40,13 @@ public class FileManageService {
             Path uniqueTarget = VideoNameUtils.uniqueSibling(target);
             Files.move(source, uniqueTarget, StandardCopyOption.ATOMIC_MOVE);
             movedFiles.add(uniqueTarget.toString());
+            persistenceService.recordOperation(
+                    "MOVE_TO_BACKUP",
+                    video.getId(),
+                    null,
+                    video.getFileName(),
+                    "源文件已移动到备份目录: " + uniqueTarget
+            );
         }
         return movedFiles;
     }

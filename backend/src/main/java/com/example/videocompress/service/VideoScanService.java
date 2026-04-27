@@ -1,6 +1,8 @@
 package com.example.videocompress.service;
 
 import com.example.videocompress.config.VideoCompressProperties;
+import com.example.videocompress.model.TaskStatus;
+import com.example.videocompress.model.VideoCompressSummary;
 import com.example.videocompress.model.VideoFileInfo;
 import com.example.videocompress.model.VideoMetadata;
 import com.example.videocompress.util.DateTimeUtils;
@@ -25,32 +27,46 @@ public class VideoScanService {
     private final VideoCompressProperties properties;
     private final DirectoryService directoryService;
     private final FfprobeService ffprobeService;
+    private final PersistenceService persistenceService;
     private final Map<String, VideoFileInfo> videoRegistry = new ConcurrentHashMap<>();
 
     public VideoScanService(
             VideoCompressProperties properties,
             DirectoryService directoryService,
-            FfprobeService ffprobeService
+            FfprobeService ffprobeService,
+            PersistenceService persistenceService
     ) {
         this.properties = properties;
         this.directoryService = directoryService;
         this.ffprobeService = ffprobeService;
+        this.persistenceService = persistenceService;
     }
 
-    public List<VideoFileInfo> scan(Long minSizeMb) throws IOException {
+    public List<VideoFileInfo> scan(Long minSizeMb, Long maxSizeMb, String compressStatus) throws IOException {
         directoryService.ensureDataDirs();
         long minBytes = Math.max(0, minSizeMb == null ? properties.getDefaultMinSizeMb() : minSizeMb) * 1024L * 1024L;
+        Long maxBytes = maxSizeMb == null || maxSizeMb <= 0 ? null : maxSizeMb * 1024L * 1024L;
         Path inputDir = properties.inputDir();
         videoRegistry.clear();
         try (Stream<Path> stream = Files.walk(inputDir)) {
-            return stream
+            List<VideoFileInfo> videos = stream
                     .filter(Files::isRegularFile)
                     .filter(this::isAllowedVideo)
                     .filter(path -> safeSize(path) >= minBytes)
+                    .filter(path -> maxBytes == null || safeSize(path) <= maxBytes)
                     .map(this::toVideoFileInfo)
+                    .filter(info -> matchCompressStatus(info, compressStatus))
                     .sorted(Comparator.comparing(VideoFileInfo::getSizeBytes, Comparator.nullsLast(Long::compareTo)).reversed())
                     .peek(info -> videoRegistry.put(info.getId(), info))
                     .toList();
+            persistenceService.recordOperation(
+                    "SCAN_VIDEO",
+                    null,
+                    null,
+                    null,
+                    "扫描完成，共 " + videos.size() + " 个视频"
+            );
+            return videos;
         }
     }
 
@@ -95,16 +111,48 @@ public class VideoScanService {
                 : metadata.getWidth() + "x" + metadata.getHeight());
         info.setCodec(metadata.getCodec() == null ? "未知" : metadata.getCodec());
         info.setFormat(extension(safePath.getFileName().toString()));
-        info.setCompressedExists(hasCompressedOutput(safePath.getFileName().toString()));
+        enrichPersistenceInfo(info, hasCompressedOutput(safePath.getFileName().toString()));
+        persistenceService.upsertVideo(info);
         return info;
+    }
+
+    private void enrichPersistenceInfo(VideoFileInfo info, boolean outputExists) {
+        VideoCompressSummary summary = persistenceService.summaryForVideo(info.getId());
+        info.setCompressedCount(summary.getSuccessCount());
+        info.setFailedCount(summary.getFailedCount());
+        info.setLastTaskStatus(summary.getLastTaskStatus());
+        info.setLastTaskMessage(summary.getLastTaskMessage());
+        info.setLastOutputPath(summary.getLastOutputPath());
+        info.setLastTaskTime(summary.getLastTaskTime());
+        info.setCompressedExists(outputExists || summary.getSuccessCount() > 0);
+        info.setDuplicateCompressionRisk(outputExists || summary.getSuccessCount() > 0);
+    }
+
+    private boolean matchCompressStatus(VideoFileInfo info, String compressStatus) {
+        if (compressStatus == null || compressStatus.isBlank() || "ALL".equalsIgnoreCase(compressStatus)) {
+            return true;
+        }
+        String status = compressStatus.toUpperCase(Locale.ROOT);
+        return switch (status) {
+            case "COMPRESSED", "SUCCESS" -> Boolean.TRUE.equals(info.getCompressedExists());
+            case "NOT_COMPRESSED", "NEVER_COMPRESSED" -> !Boolean.TRUE.equals(info.getCompressedExists());
+            case "FAILED" -> TaskStatus.FAILED.name().equals(info.getLastTaskStatus());
+            case "WAITING" -> TaskStatus.WAITING.name().equals(info.getLastTaskStatus());
+            case "RUNNING" -> TaskStatus.RUNNING.name().equals(info.getLastTaskStatus());
+            case "HAS_HISTORY" -> info.getLastTaskStatus() != null;
+            default -> true;
+        };
     }
 
     private boolean hasCompressedOutput(String fileName) {
         String baseName = VideoNameUtils.baseName(fileName);
-        String extension = VideoNameUtils.extension(fileName);
+        String sourceExtension = VideoNameUtils.extension(fileName);
         try (Stream<Path> files = Files.list(properties.outputDir())) {
-            return files.anyMatch(path -> path.getFileName().toString().startsWith(baseName + "_compressed")
-                    && path.getFileName().toString().endsWith(extension));
+            return files.anyMatch(path -> {
+                String outputName = path.getFileName().toString();
+                return outputName.startsWith(baseName + "_compressed")
+                        && (outputName.endsWith(".mp4") || outputName.endsWith(sourceExtension));
+            });
         } catch (IOException ex) {
             return false;
         }

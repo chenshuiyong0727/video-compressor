@@ -24,7 +24,7 @@ public final class VideoNameUtils {
 
     public static Path compressedOutputPath(Path outputDir, String sourceFileName, boolean overwrite) {
         String base = baseName(sourceFileName);
-        String extension = extension(sourceFileName);
+        String extension = ".mp4";
         Path candidate = outputDir.resolve(base + "_compressed" + extension);
         if (overwrite || !Files.exists(candidate)) {
             return candidate;

@@ -12,7 +12,6 @@ import jakarta.annotation.PreDestroy;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +20,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -31,6 +31,7 @@ public class TaskService {
     private final VideoCompressProperties properties;
     private final VideoScanService videoScanService;
     private final FfmpegService ffmpegService;
+    private final PersistenceService persistenceService;
     private final ExecutorService executorService;
     private final ConcurrentHashMap<String, CompressTask> taskMap = new ConcurrentHashMap<>();
     private final ConcurrentLinkedDeque<String> taskOrder = new ConcurrentLinkedDeque<>();
@@ -38,11 +39,13 @@ public class TaskService {
     public TaskService(
             VideoCompressProperties properties,
             VideoScanService videoScanService,
-            FfmpegService ffmpegService
+            FfmpegService ffmpegService,
+            PersistenceService persistenceService
     ) {
         this.properties = properties;
         this.videoScanService = videoScanService;
         this.ffmpegService = ffmpegService;
+        this.persistenceService = persistenceService;
         ThreadFactory threadFactory = runnable -> {
             Thread thread = new Thread(runnable, "video-compress-worker");
             thread.setDaemon(true);
@@ -60,6 +63,14 @@ public class TaskService {
             taskMap.put(task.getTaskId(), task);
             taskOrder.addFirst(task.getTaskId());
             created.add(task);
+            persistenceService.insertTask(task);
+            persistenceService.recordOperation(
+                    "CREATE_TASK",
+                    task.getVideoId(),
+                    task.getTaskId(),
+                    task.getFileName(),
+                    duplicateMessage(video)
+            );
             executorService.submit(() -> runTask(task.getTaskId()));
         }
         cleanupOldFinishedTasks();
@@ -67,13 +78,12 @@ public class TaskService {
     }
 
     public List<CompressTask> list() {
-        return taskMap.values().stream()
-                .sorted(Comparator.comparing(CompressTask::getCreateTime, Comparator.nullsLast(LocalDateTime::compareTo)).reversed())
-                .toList();
+        return persistenceService.listTasks(MAX_TASK_HISTORY);
     }
 
     public Optional<CompressTask> find(String taskId) {
-        return Optional.ofNullable(taskMap.get(taskId));
+        CompressTask task = taskMap.get(taskId);
+        return task == null ? persistenceService.findTask(taskId) : Optional.of(task);
     }
 
     public CompressTask cancel(String taskId) {
@@ -86,12 +96,21 @@ public class TaskService {
             task.setProgress(0);
             task.setMessage("已取消等待中的任务");
             task.setEndTime(LocalDateTime.now());
+            persistenceService.updateTask(task);
+            persistenceService.recordOperation("CANCEL_TASK", task.getVideoId(), task.getTaskId(), task.getFileName(), task.getMessage());
             return task;
         }
         if (task.getStatus() == TaskStatus.RUNNING) {
             throw new IllegalStateException("当前版本暂不支持取消正在运行的 FFmpeg 进程");
         }
         return task;
+    }
+
+    private String duplicateMessage(VideoFileInfo video) {
+        if (Boolean.TRUE.equals(video.getDuplicateCompressionRisk())) {
+            return "创建压缩任务：该文件已有成功压缩记录，属于重复压缩";
+        }
+        return "创建压缩任务";
     }
 
     private CompressTask createTask(VideoFileInfo video, CompressRequest request) {
@@ -129,14 +148,28 @@ public class TaskService {
             task.setStatus(TaskStatus.RUNNING);
             task.setStartTime(LocalDateTime.now());
             task.setMessage("正在压缩");
-            ffmpegService.compress(task, video);
+            persistenceService.updateTask(task);
+            persistenceService.recordOperation("TASK_RUNNING", task.getVideoId(), task.getTaskId(), task.getFileName(), "开始压缩");
+            AtomicInteger lastPersistedProgress = new AtomicInteger(task.getProgress());
+            ffmpegService.compress(task, video, progressTask -> {
+                int progress = progressTask.getProgress();
+                if (progress - lastPersistedProgress.get() >= 5 || progress >= 99) {
+                    lastPersistedProgress.set(progress);
+                    persistenceService.updateTask(progressTask);
+                }
+            });
             task.setStatus(TaskStatus.SUCCESS);
             task.setProgress(100);
             task.setMessage("压缩完成");
+            task.setEndTime(LocalDateTime.now());
+            persistenceService.updateTask(task);
+            persistenceService.recordOperation("TASK_SUCCESS", task.getVideoId(), task.getTaskId(), task.getFileName(), "压缩完成");
         } catch (Exception ex) {
             task.setStatus(TaskStatus.FAILED);
             task.setMessage(ex.getMessage());
             task.setEndTime(LocalDateTime.now());
+            persistenceService.updateTask(task);
+            persistenceService.recordOperation("TASK_FAILED", task.getVideoId(), task.getTaskId(), task.getFileName(), ex.getMessage());
         } finally {
             cleanupOldFinishedTasks();
         }

@@ -1,11 +1,13 @@
 package com.example.videocompress.service;
 
 import com.example.videocompress.config.VideoCompressProperties;
+import com.example.videocompress.model.OperationLog;
+import com.example.videocompress.model.SystemDirs;
 import com.example.videocompress.model.SystemCheckResult;
 import com.example.videocompress.util.ProcessUtils;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
-import java.util.Map;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,10 +15,16 @@ public class SystemService {
 
     private final VideoCompressProperties properties;
     private final DirectoryService directoryService;
+    private final PersistenceService persistenceService;
 
-    public SystemService(VideoCompressProperties properties, DirectoryService directoryService) {
+    public SystemService(
+            VideoCompressProperties properties,
+            DirectoryService directoryService,
+            PersistenceService persistenceService
+    ) {
         this.properties = properties;
         this.directoryService = directoryService;
+        this.persistenceService = persistenceService;
     }
 
     public SystemCheckResult check() {
@@ -45,7 +53,16 @@ public class SystemService {
         return result;
     }
 
-    public Map<String, String> dirs() {
+    public SystemDirs dirs() {
         return directoryService.dirs();
+    }
+
+    public SystemDirs updateDirs(SystemDirs dirs) throws IOException {
+        return directoryService.updateDirs(dirs);
+    }
+
+    public List<OperationLog> operationLogs(Integer limit) {
+        int actualLimit = limit == null ? 200 : Math.min(Math.max(limit, 1), 1000);
+        return persistenceService.listOperationLogs(actualLimit);
     }
 }

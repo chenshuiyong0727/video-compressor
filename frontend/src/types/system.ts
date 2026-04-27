@@ -18,3 +18,13 @@ export interface SystemDirs {
   tempDir: string;
   logDir: string;
 }
+
+export interface OperationLog {
+  id: number;
+  operationType: string;
+  videoId?: string;
+  taskId?: string;
+  fileName?: string;
+  message?: string;
+  createTime: string;
+}

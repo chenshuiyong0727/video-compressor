@@ -15,6 +15,7 @@ public class VideoCompressProperties {
     private String backupDir = "./data/backup";
     private String tempDir = "./data/temp";
     private String logDir = "./data/logs";
+    private String dbPath = "./data/db/video-compressor.db";
     private List<String> allowedExtensions = new ArrayList<>(List.of("mp4", "mov", "m4v", "mkv", "avi", "3gp"));
     private long defaultMinSizeMb = 100;
     private int maxParallelTasks = 1;
@@ -45,6 +46,10 @@ public class VideoCompressProperties {
 
     public Path logDir() {
         return Path.of(logDir).toAbsolutePath().normalize();
+    }
+
+    public Path dbPath() {
+        return Path.of(dbPath).toAbsolutePath().normalize();
     }
 
     public String getFfmpegPath() {
@@ -101,6 +106,14 @@ public class VideoCompressProperties {
 
     public void setLogDir(String logDir) {
         this.logDir = logDir;
+    }
+
+    public String getDbPath() {
+        return dbPath;
+    }
+
+    public void setDbPath(String dbPath) {
+        this.dbPath = dbPath;
     }
 
     public List<String> getAllowedExtensions() {

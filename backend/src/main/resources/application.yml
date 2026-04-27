@@ -11,11 +11,12 @@ spring:
 video:
   ffmpeg-path: ./ffmpeg/ffmpeg.exe
   ffprobe-path: ./ffmpeg/ffprobe.exe
-  input-dir: ./data/input
-  output-dir: ./data/output
+  input-dir: E:/照片
+  output-dir: E:/压缩图片
   backup-dir: ./data/backup
   temp-dir: ./data/temp
   log-dir: ./data/logs
+  db-path: ./data/db/video-compressor.db
   allowed-extensions:
     - mp4
     - mov

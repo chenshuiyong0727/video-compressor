@@ -14,4 +14,11 @@ export interface VideoFileInfo {
   codec: string;
   format: string;
   compressedExists: boolean;
+  compressedCount?: number;
+  failedCount?: number;
+  lastTaskStatus?: string;
+  lastTaskMessage?: string;
+  lastOutputPath?: string;
+  lastTaskTime?: number;
+  duplicateCompressionRisk?: boolean;
 }

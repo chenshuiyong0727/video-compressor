@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,7 +27,7 @@ public class FfmpegService {
         this.ffprobeService = ffprobeService;
     }
 
-    public void compress(CompressTask task, VideoFileInfo video) throws Exception {
+    public void compress(CompressTask task, VideoFileInfo video, Consumer<CompressTask> progressConsumer) throws Exception {
         Path source = PathSafeUtils.ensureInside(properties.inputDir(), Path.of(video.getAbsolutePath()));
         Path output = PathSafeUtils.ensureInside(properties.outputDir(), Path.of(task.getOutputPath()));
         if (!Files.isRegularFile(properties.ffmpegPath())) {
@@ -47,7 +48,7 @@ public class FfmpegService {
                 errorOutput.append(line).append(System.lineSeparator());
             }
         });
-        ProcessUtils.readAsync(process.getInputStream(), line -> updateProgress(task, line, video.getDurationSeconds()));
+        ProcessUtils.readAsync(process.getInputStream(), line -> updateProgress(task, line, video.getDurationSeconds(), progressConsumer));
 
         boolean finished = process.waitFor(14, TimeUnit.DAYS);
         if (!finished) {
@@ -62,7 +63,12 @@ public class FfmpegService {
         task.setEndTime(LocalDateTime.now());
     }
 
-    private void updateProgress(CompressTask task, String line, Double durationSeconds) {
+    private void updateProgress(
+            CompressTask task,
+            String line,
+            Double durationSeconds,
+            Consumer<CompressTask> progressConsumer
+    ) {
         if (durationSeconds == null || durationSeconds <= 0 || line == null) {
             return;
         }
@@ -78,7 +84,13 @@ public class FfmpegService {
         try {
             double currentSeconds = Long.parseLong(value.trim()) / 1_000_000.0;
             int percent = (int) Math.floor(Math.min(99, Math.max(0, currentSeconds / durationSeconds * 100)));
-            task.setProgress(Math.max(task.getProgress(), percent));
+            int nextProgress = Math.max(task.getProgress(), percent);
+            if (nextProgress > task.getProgress()) {
+                task.setProgress(nextProgress);
+                if (progressConsumer != null) {
+                    progressConsumer.accept(task);
+                }
+            }
         } catch (NumberFormatException ignored) {
         }
     }

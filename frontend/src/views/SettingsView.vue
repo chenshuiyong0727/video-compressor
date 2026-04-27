@@ -5,16 +5,34 @@
     <div class="panel">
       <div class="toolbar-left" style="justify-content: space-between; margin-bottom: 14px">
         <strong>本地目录</strong>
-        <el-button :icon="Refresh" :loading="dirLoading" @click="loadDirs">刷新</el-button>
+        <div class="toolbar-left">
+          <el-button :icon="Refresh" :loading="dirLoading" @click="loadDirs">刷新</el-button>
+          <el-button type="primary" :icon="Check" :loading="saving" @click="saveDirs">保存</el-button>
+        </div>
       </div>
-      <el-descriptions v-if="dirs" :column="1" border>
-        <el-descriptions-item label="input"><span class="path-value">{{ dirs.inputDir }}</span></el-descriptions-item>
-        <el-descriptions-item label="output"><span class="path-value">{{ dirs.outputDir }}</span></el-descriptions-item>
-        <el-descriptions-item label="backup"><span class="path-value">{{ dirs.backupDir }}</span></el-descriptions-item>
-        <el-descriptions-item label="temp"><span class="path-value">{{ dirs.tempDir }}</span></el-descriptions-item>
-        <el-descriptions-item label="logs"><span class="path-value">{{ dirs.logDir }}</span></el-descriptions-item>
-      </el-descriptions>
+
+      <el-form v-if="dirForm" label-width="96px" label-position="left">
+        <el-form-item label="input">
+          <el-input v-model="dirForm.inputDir" placeholder="例如：E:/照片" clearable />
+        </el-form-item>
+        <el-form-item label="output">
+          <el-input v-model="dirForm.outputDir" placeholder="例如：E:/压缩后视频 或 ./data/output" clearable />
+        </el-form-item>
+        <el-form-item label="backup">
+          <el-input v-model="dirForm.backupDir" placeholder="例如：E:/视频备份 或 ./data/backup" clearable />
+        </el-form-item>
+        <el-form-item label="temp">
+          <el-input v-model="dirForm.tempDir" placeholder="例如：./data/temp" clearable />
+        </el-form-item>
+        <el-form-item label="logs">
+          <el-input v-model="dirForm.logDir" placeholder="例如：./data/logs" clearable />
+        </el-form-item>
+      </el-form>
       <el-empty v-else description="暂无目录信息" />
+
+      <div class="muted">
+        支持绝对路径，例如 E:/照片。保存后后端会立即使用新目录，并自动创建不存在的目录。
+      </div>
     </div>
 
     <div class="panel" style="grid-column: 1 / -1">
@@ -31,20 +49,21 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
-import { Refresh } from "@element-plus/icons-vue";
+import { Check, Refresh } from "@element-plus/icons-vue";
 import SystemCheckPanel from "../components/SystemCheckPanel.vue";
-import { checkSystem, getSystemDirs } from "../api/systemApi";
+import { checkSystem, getSystemDirs, saveSystemDirs } from "../api/systemApi";
 import type { SystemCheckResult, SystemDirs } from "../types/system";
 
 const checkResult = ref<SystemCheckResult>();
-const dirs = ref<SystemDirs>();
+const dirForm = ref<SystemDirs>();
 const checking = ref(false);
 const dirLoading = ref(false);
+const saving = ref(false);
 
 const profiles = [
-  { name: "高清优先", command: "H.264 / libx264 / preset slow / crf 22 / aac 128k", scene: "重要视频，清晰度保留更好" },
-  { name: "平衡模式", command: "H.264 / libx264 / preset medium / crf 24 / aac 128k", scene: "默认推荐，适合大部分手机视频" },
-  { name: "小体积优先", command: "H.264 / libx264 / preset medium / crf 27 / aac 96k", scene: "不重要的视频，体积更小" }
+  { name: "高清优先", command: "MP4 / H.264 / yuv420p / crf 22 / aac 128k", scene: "重要视频，清晰度保留更好" },
+  { name: "平衡模式", command: "MP4 / H.264 / yuv420p / crf 24 / aac 128k", scene: "默认推荐，适合大部分手机视频" },
+  { name: "小体积优先", command: "MP4 / H.264 / yuv420p / crf 27 / aac 96k", scene: "不重要的视频，体积更小" }
 ];
 
 onMounted(async () => {
@@ -65,11 +84,27 @@ async function runCheck() {
 async function loadDirs() {
   dirLoading.value = true;
   try {
-    dirs.value = await getSystemDirs();
+    dirForm.value = await getSystemDirs();
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "读取目录失败");
   } finally {
     dirLoading.value = false;
+  }
+}
+
+async function saveDirs() {
+  if (!dirForm.value) {
+    return;
+  }
+  saving.value = true;
+  try {
+    dirForm.value = await saveSystemDirs(dirForm.value);
+    ElMessage.success("目录配置已保存，请重新扫描视频");
+    await runCheck();
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "保存目录失败");
+  } finally {
+    saving.value = false;
   }
 }
 </script>

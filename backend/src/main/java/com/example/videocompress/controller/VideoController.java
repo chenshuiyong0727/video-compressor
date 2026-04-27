@@ -28,8 +28,12 @@ public class VideoController {
     }
 
     @GetMapping("/scan")
-    public ApiResult<List<VideoFileInfo>> scan(@RequestParam(required = false) Long minSizeMb) throws IOException {
-        return ApiResult.success(videoScanService.scan(minSizeMb));
+    public ApiResult<List<VideoFileInfo>> scan(
+            @RequestParam(required = false) Long minSizeMb,
+            @RequestParam(required = false) Long maxSizeMb,
+            @RequestParam(required = false) String compressStatus
+    ) throws IOException {
+        return ApiResult.success(videoScanService.scan(minSizeMb, maxSizeMb, compressStatus));
     }
 
     @PostMapping("/backup")
