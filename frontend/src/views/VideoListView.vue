@@ -62,6 +62,7 @@ import type { VideoFileInfo } from "../types/video";
 const router = useRouter();
 const MIN_SIZE_CACHE_KEY = "local-video-compressor:min-size-mb";
 const MAX_SIZE_CACHE_KEY = "local-video-compressor:max-size-mb";
+const CURRENT_BATCH_CACHE_KEY = "local-video-compressor:current-batch-id";
 const minSizeMb = ref(readCachedMinSizeMb());
 const maxSizeMb = ref<number | undefined>(readCachedMaxSizeMb());
 const loading = ref(false);
@@ -163,6 +164,9 @@ async function submitCompress(videosToCompress: VideoFileInfo[]) {
       profile: profile.value,
       overwriteOutput: false
     });
+    if (tasks[0]?.batchId) {
+      localStorage.setItem(CURRENT_BATCH_CACHE_KEY, tasks[0].batchId);
+    }
     ElMessage.success(`已创建 ${tasks.length} 个压缩任务`);
     await router.push("/tasks");
   } catch (error) {

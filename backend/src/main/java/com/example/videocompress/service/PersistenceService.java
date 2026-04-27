@@ -122,13 +122,14 @@ public class PersistenceService {
     public void insertTask(CompressTask task) {
         jdbcTemplate.update("""
                 INSERT INTO compress_task (
-                    task_id, video_id, source_path, output_path, file_name,
+                    task_id, batch_id, video_id, source_path, output_path, file_name,
                     source_size_bytes, output_size_bytes, source_size_text, output_size_text,
                     progress, status, message, profile, create_time, start_time, end_time, save_percent
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 task.getTaskId(),
+                task.getBatchId(),
                 task.getVideoId(),
                 task.getSourcePath(),
                 task.getOutputPath(),
@@ -188,7 +189,13 @@ public class PersistenceService {
         return jdbcTemplate.query("""
                 SELECT *
                 FROM compress_task
-                ORDER BY COALESCE(end_time, start_time, create_time) DESC
+                ORDER BY
+                    CASE
+                        WHEN status = 'RUNNING' THEN 0
+                        WHEN status = 'WAITING' THEN 1
+                        ELSE 2
+                    END,
+                    create_time ASC
                 LIMIT ?
                 """, this::mapTask, limit);
     }
@@ -224,6 +231,7 @@ public class PersistenceService {
     private CompressTask mapTask(ResultSet rs, int rowNum) throws SQLException {
         CompressTask task = new CompressTask();
         task.setTaskId(rs.getString("task_id"));
+        task.setBatchId(rs.getString("batch_id"));
         task.setVideoId(rs.getString("video_id"));
         task.setSourcePath(rs.getString("source_path"));
         task.setOutputPath(rs.getString("output_path"));

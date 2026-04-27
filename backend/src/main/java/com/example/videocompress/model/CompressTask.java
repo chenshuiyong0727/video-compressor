@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public class CompressTask {
 
     private String taskId;
+    private String batchId;
     private String videoId;
     private String sourcePath;
     private String outputPath;
@@ -28,6 +29,14 @@ public class CompressTask {
 
     public void setTaskId(String taskId) {
         this.taskId = taskId;
+    }
+
+    public String getBatchId() {
+        return batchId;
+    }
+
+    public void setBatchId(String batchId) {
+        this.batchId = batchId;
     }
 
     public String getVideoId() {

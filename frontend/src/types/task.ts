@@ -3,6 +3,7 @@ export type TaskStatus = "WAITING" | "RUNNING" | "SUCCESS" | "FAILED" | "CANCELL
 
 export interface CompressTask {
   taskId: string;
+  batchId?: string;
   videoId: string;
   sourcePath: string;
   outputPath: string;

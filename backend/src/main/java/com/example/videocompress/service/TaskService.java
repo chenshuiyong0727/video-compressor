@@ -56,10 +56,11 @@ public class TaskService {
 
     public List<CompressTask> submit(CompressRequest request) {
         List<CompressTask> created = new ArrayList<>();
+        String batchId = UUID.randomUUID().toString().replace("-", "");
         for (String videoId : request.getVideoIds()) {
             VideoFileInfo video = videoScanService.findById(videoId)
                     .orElseThrow(() -> new IllegalArgumentException("未找到视频，请先重新扫描: " + videoId));
-            CompressTask task = createTask(video, request);
+            CompressTask task = createTask(video, request, batchId);
             taskMap.put(task.getTaskId(), task);
             taskOrder.addFirst(task.getTaskId());
             created.add(task);
@@ -113,7 +114,7 @@ public class TaskService {
         return "创建压缩任务";
     }
 
-    private CompressTask createTask(VideoFileInfo video, CompressRequest request) {
+    private CompressTask createTask(VideoFileInfo video, CompressRequest request, String batchId) {
         Path outputPath = VideoNameUtils.compressedOutputPath(
                 properties.outputDir(),
                 video.getFileName(),
@@ -123,6 +124,7 @@ public class TaskService {
 
         CompressTask task = new CompressTask();
         task.setTaskId(UUID.randomUUID().toString().replace("-", ""));
+        task.setBatchId(batchId);
         task.setVideoId(video.getId());
         task.setSourcePath(video.getAbsolutePath());
         task.setOutputPath(safeOutput.toString());

@@ -1,5 +1,6 @@
 <template>
   <el-table :data="tasks" height="calc(100vh - 180px)" row-key="taskId">
+    <el-table-column type="index" label="序号" width="64" />
     <el-table-column prop="fileName" label="文件名" min-width="260" show-overflow-tooltip />
     <el-table-column prop="status" label="状态" width="110">
       <template #default="{ row }">

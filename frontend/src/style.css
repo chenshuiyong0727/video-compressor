@@ -135,6 +135,23 @@ body {
   overflow: hidden;
 }
 
+.progress-panel {
+  margin-bottom: 16px;
+}
+
+.progress-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.progress-summary span {
+  color: #64748b;
+  font-size: 13px;
+}
+
 .status-row {
   display: flex;
   gap: 8px;

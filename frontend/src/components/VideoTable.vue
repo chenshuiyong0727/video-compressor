@@ -6,6 +6,7 @@
     @selection-change="emitSelection"
   >
     <el-table-column type="selection" width="46" />
+    <el-table-column type="index" label="序号" width="64" />
     <el-table-column prop="fileName" label="文件名" min-width="260" show-overflow-tooltip />
     <el-table-column prop="sizeBytes" label="大小" sortable width="120">
       <template #default="{ row }">{{ row.sizeText }}</template>
