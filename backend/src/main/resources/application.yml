@@ -1,0 +1,27 @@
+server:
+  port: 8787
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10GB
+      max-request-size: 10GB
+      file-size-threshold: 10MB
+
+video:
+  ffmpeg-path: ./ffmpeg/ffmpeg.exe
+  ffprobe-path: ./ffmpeg/ffprobe.exe
+  input-dir: ./data/input
+  output-dir: ./data/output
+  backup-dir: ./data/backup
+  temp-dir: ./data/temp
+  log-dir: ./data/logs
+  allowed-extensions:
+    - mp4
+    - mov
+    - m4v
+    - mkv
+    - avi
+    - 3gp
+  default-min-size-mb: 100
+  max-parallel-tasks: 1

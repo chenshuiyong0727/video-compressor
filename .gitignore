@@ -59,6 +59,25 @@ yarn-debug.log*
 yarn-error.log*
 **/*.log
 
+# local-video-compressor runtime files
+frontend/dist/
+backend/src/main/resources/static/*
+!backend/src/main/resources/static/.gitkeep
+data/**
+!data/
+!data/input/
+!data/output/
+!data/backup/
+!data/temp/
+!data/logs/
+!data/input/.gitkeep
+!data/output/.gitkeep
+!data/backup/.gitkeep
+!data/temp/.gitkeep
+!data/logs/.gitkeep
+ffmpeg/*.exe
+local-video-compressor.jar
+
 tests/**/coverage/
 tests/e2e/reports
 selenium-debug.log
