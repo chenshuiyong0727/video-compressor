@@ -48,7 +48,7 @@ import type { SystemDirs } from "../types/system";
 import type { VideoFileInfo } from "../types/video";
 
 const router = useRouter();
-const minSizeMb = ref(100);
+const minSizeMb = ref(20);
 const loading = ref(false);
 const videos = ref<VideoFileInfo[]>([]);
 const selected = ref<VideoFileInfo[]>([]);

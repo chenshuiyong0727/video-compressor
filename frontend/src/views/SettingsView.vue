@@ -42,9 +42,9 @@ const checking = ref(false);
 const dirLoading = ref(false);
 
 const profiles = [
-  { name: "高清优先", command: "libx264 / preset slow / crf 22 / aac 128k", scene: "重要视频，清晰度保留更好" },
-  { name: "平衡模式", command: "libx264 / preset medium / crf 24 / aac 128k", scene: "默认推荐，适合大部分手机视频" },
-  { name: "小体积优先", command: "libx264 / preset medium / crf 27 / aac 96k", scene: "不重要的视频，体积更小" }
+  { name: "高清优先", command: "H.264 / libx264 / preset slow / crf 22 / aac 128k", scene: "重要视频，清晰度保留更好" },
+  { name: "平衡模式", command: "H.264 / libx264 / preset medium / crf 24 / aac 128k", scene: "默认推荐，适合大部分手机视频" },
+  { name: "小体积优先", command: "H.264 / libx264 / preset medium / crf 27 / aac 96k", scene: "不重要的视频，体积更小" }
 ];
 
 onMounted(async () => {

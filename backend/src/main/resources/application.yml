@@ -23,5 +23,5 @@ video:
     - mkv
     - avi
     - 3gp
-  default-min-size-mb: 100
+  default-min-size-mb: 10
   max-parallel-tasks: 1

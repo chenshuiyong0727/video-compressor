@@ -5,7 +5,7 @@
         <div class="brand-mark">VC</div>
         <div>
           <div class="brand-title">本地视频批量压缩工具</div>
-          <div class="brand-subtitle">local-video-compressor</div>
+<!--          <div class="brand-subtitle">local-video-compressor</div>-->
         </div>
       </div>
       <el-menu router :default-active="$route.path" class="nav-menu">
